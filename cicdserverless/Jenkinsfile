@@ -1,0 +1,26 @@
+pipeline {
+    agent {
+        docker { image "registry.rome.support/k8s/jenkins_docker_terraform:latest"}
+    }
+    stages {
+        stage('code pull') {
+            steps {
+                sh 'git clone -b Serverless git@34.253.13.230:systems/sys-repo.git'
+                sh 'cd sys-repo/cicdserverless/example && zip example.zip main.js'
+                
+            }
+        }
+        stage('pre deploy') {
+            steps {
+                sh 'cd sys-repo/cicdserverless/example && aws s3 cp example.zip s3://terraform-serverless-test/${BUILD_NUMBER}/example.zip'
+                sh 'cd sys-repo/cicdserverless/terraform && terraform init'
+                sh 'cd sys-repo/cicdserverless/terraform && terraform plan'
+            }
+        }
+        stage('code deloy') {
+            steps {
+                sh 'cd sys-repo/cicdserverless/terraform && terraform apply -var="app_version=${BUILD_NUMBER}" -auto-approve'
+            }
+        }
+    }
+}
